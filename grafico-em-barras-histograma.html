@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Histograma 3D - Título Dinâmico</title>
+
+<style>
+    :root {
+        /* =========================================================
+           📐 TAMANHO DO GRÁFICO
+           ========================================================= */
+        --largura-grafico: 1060px;
+        --altura-grafico: 675px; /* Agora funciona como altura MÍNIMA */
+        --margem-interna: 20px;
+        
+        --cor-fundo-grafico: #ced4db;
+        --cor-fundo-pagina: #eeeeee;
+
+        /* Barras 3D e Iluminação (Valores Padrão) */
+        --profundidade-3d: 18px;
+        --cor-borda-barra: #222222;
+
+        /* Eixos e Tipografia */
+        --cor-eixo: #111111;
+        --espessura-eixo: 1px;
+        --cor-grade: #a5acb5;
+        --espessura-grade: 1px;
+        --fonte-principal: "Segoe UI", Arial, sans-serif;
+        
+        --tamanho-titulo: 22px;
+        --tamanho-titulo-y: 16px;
+        --tamanho-valores-y: 16px;
+        --tamanho-titulo-x: 16px;
+        --tamanho-valores-x: 16px;
+        --tamanho-valor-barra: 16px;
+        --distancia-valor-barra: 20px;
+        --tamanho-fonte: 14px;
+
+        /* =========================================================
+           📏 ESPAÇAMENTOS DO GRID
+           ========================================================= */
+        --largura-titulo-y: 55px;
+        --largura-valores-y: 55px;
+        --espaco-y-grafico: 12px;
+        
+        /* O título agora tem altura 'auto' para aceitar quebra de linhas */
+        --altura-titulo: auto; 
+        
+        /* Distância PADRONIZADA entre o final do título e o topo do gráfico */
+        --espaco-titulo-grafico: 40px; 
+        
+        --altura-plotagem: 400px;
+        --altura-valores-x: 35px;
+        --altura-titulo-x: 45px;
+        --altura-rodape: 45px;
+    }
+
+    /* =========================================================
+       🎨 PALETAS DE CORES
+       ========================================================= */
+.paleta-roxa {
+        --luz-frente: linear-gradient(to right, #cf4acf 0%, #a623a6 35%, #6a0f6a 100%);
+        --luz-topo: linear-gradient(135deg, #e87ae8 0%, #b32eb3 100%);
+        --luz-lado: linear-gradient(to bottom, #7d167d 0%, #400740 100%);
+    }
+    .paleta-azul {
+        --luz-frente: linear-gradient(to right, #4a90e2 0%, #216bb5 35%, #0f3d73 100%);
+        --luz-topo: linear-gradient(135deg, #74b9ff 0%, #3682d1 100%);
+        --luz-lado: linear-gradient(to bottom, #1d5f9e 0%, #0a274a 100%);
+    }
+    .paleta-verde {
+        --luz-frente: linear-gradient(to right, #2ecc71 0%, #1e9950 35%, #0d542a 100%);
+        --luz-topo: linear-gradient(135deg, #58d68d 0%, #22b35a 100%);
+        --luz-lado: linear-gradient(to bottom, #198042 0%, #083b1c 100%);
+    }
+    .paleta-laranja {
+        --luz-frente: linear-gradient(to right, #f39c12 0%, #c47600 35%, #7a4a00 100%);
+        --luz-topo: linear-gradient(135deg, #f5b041 0%, #d68918 100%);
+        --luz-lado: linear-gradient(to bottom, #b36b00 0%, #523100 100%);
+    }
+    .paleta-vermelha {
+        --luz-frente: linear-gradient(to right, #e74c3c 0%, #ba2b1d 35%, #78130a 100%);
+        --luz-topo: linear-gradient(135deg, #f1948a 0%, #cb4335 100%);
+        --luz-lado: linear-gradient(to bottom, #a93226 0%, #641e16 100%);
+    }
+    .paleta-escura {
+        --luz-frente: linear-gradient(to right, #5d6d7e 0%, #34495e 35%, #1c2833 100%);
+        --luz-topo: linear-gradient(135deg, #85929e 0%, #2e4053 100%);
+        --luz-lado: linear-gradient(to bottom, #283747 0%, #17202a 100%);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--fonte-principal); }
+    body { background: var(--cor-fundo-pagina); min-height: 100vh; display: flex; flex-wrap: wrap; gap: 40px; justify-content: center; align-items: center; padding: 40px; }
+
+    /* =========================================================
+       CONTAINER PRINCIPAL
+       ========================================================= */
+    .chart-container {
+        zoom: var(--escala, 1);
+        width: var(--largura-grafico); 
+        
+        /* Permite que o gráfico cresça se o título tiver muitas linhas */
+        min-height: var(--altura-grafico);
+        height: auto; 
+        
+        background: var(--cor-fundo-grafico);
+        display: grid;
+        grid-template-columns: var(--largura-titulo-y) var(--largura-valores-y) 1fr 25px;
+        grid-template-rows: var(--altura-titulo) var(--altura-plotagem) var(--altura-valores-x) var(--altura-titulo-x) var(--altura-rodape);
+        grid-template-areas:
+            ".      .      titulo titulo"
+            "e-y-t  e-y-n  plot   plot"
+            ".      .      x-n    x-n"
+            ".      .      x-t    x-t"
+            "rodape rodape rodape rodape";
+        padding: var(--margem-interna);
+        box-shadow: 0 5px 18px rgba(0,0,0,.15);
+    }
+
+    /* Textos e Áreas Base */
+    .area-titulo { 
+        grid-area: titulo; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        text-align: center; 
+        font-size: var(--tamanho-titulo); 
+        font-weight: bold; 
+        color: #000;
+        
+        /* Espaçamentos garantidos do título */
+        margin-top: 20px;
+        margin-bottom: var(--espaco-titulo-grafico);
+    }
+
+    .area-titulo-y { grid-area: e-y-t; display: flex; justify-content: center; align-items: center; }
+    .area-titulo-y span { transform: rotate(-90deg); white-space: nowrap; font-size: var(--tamanho-titulo-y); font-weight: bold; color: #000; }
+    
+    .area-valores-y { grid-area: e-y-n; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; padding-right: var(--espaco-y-grafico); padding-top: 5px; font-size: var(--tamanho-valores-y); color: #000; }
+    
+    .area-titulo-x { grid-area: x-t; display: flex; align-items: center; justify-content: center; font-size: var(--tamanho-titulo-x); font-weight: bold; color: #000; }
+    .area-rodape { grid-area: rodape; display: flex; align-items: flex-end; padding-left: 15px; font-size: var(--tamanho-fonte); color: #000; }
+
+    /* Eixos e Area do Gráfico */
+    .area-plotagem { grid-area: plot; position: relative; border-left: var(--espessura-eixo) solid var(--cor-eixo); border-bottom: var(--espessura-eixo) solid var(--cor-eixo); overflow: visible; margin-right: 30px; }
+    .linhas-grade { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
+    .linha { width: 100%; height: var(--espessura-grade); background: var(--cor-grade); }
+    .linha:last-child { background: transparent; }
+    
+    /* Eixo X: Posicionamento cravado nas divisórias */
+    .area-valores-x { grid-area: x-n; position: relative; margin-right: 30px; }
+    .pos-x { position: absolute; top: 7px; transform: translateX(-50%); font-size: var(--tamanho-valores-x); color: #000; }
+
+    /* Barras 3D */
+    .grid-barras { position: absolute; inset: 0; display: grid; column-gap: 0; align-items: end; overflow: visible; }
+    .barra-wrapper { position: relative; width: 100%; height: 100%; display: flex; align-items: flex-end; overflow: visible; }
+    .barra-3d { position: relative; width: 100%; background: transparent; overflow: visible; transition: height 0.3s ease; }
+    
+    .face-frente { position: absolute; left: 0; bottom: 0; width: 100%; height: 100%; background: var(--luz-frente); border: 1px solid var(--cor-borda-barra); z-index: 3; }
+    .face-topo { position: absolute; left: 0; bottom: 100%; width: calc(100% + var(--profundidade-3d)); height: var(--profundidade-3d); background: var(--luz-topo); border: 1px solid var(--cor-borda-barra); clip-path: polygon(0 100%, calc(100% - var(--profundidade-3d)) 100%, 100% 0, var(--profundidade-3d) 0); z-index: 2; }
+    .face-lado { position: absolute; left: 100%; bottom: 0; width: var(--profundidade-3d); height: calc(100% + var(--profundidade-3d)); background: var(--luz-lado); border: 1px solid var(--cor-borda-barra); clip-path: polygon(0 var(--profundidade-3d), 100% 0, 100% 100%, 0 100%); z-index: 1; }
+    
+    /* Estado: Valor Zero */
+    .barra-zero .face-frente { display: none; }
+    .barra-zero .valor-rotulo { bottom: calc(100% + var(--profundidade-3d) + var(--distancia-valor-barra)); }
+    .valor-rotulo { position: absolute; left: 50%; bottom: calc(100% + var(--distancia-valor-barra)); transform: translateX(-50%); font-size: var(--tamanho-valor-barra); color: #000; z-index: 20; white-space: nowrap; }
+</style>
+</head>
+
+<body>
+
+<!-- Divs que receberão os gráficos -->
+<div id="grafico-1" class="chart-container"></div>
+
+<script>
+/**
+ * Função geradora do Histograma 3D
+ */
+function criarHistograma3D(containerId, config) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    // Aplica Paleta e Escala
+    const paletaClasse = config.paleta ? `paleta-${config.paleta}` : 'paleta-roxa';
+    container.classList.add(paletaClasse);
+
+    if (config.escala) {
+        container.style.setProperty('--escala', config.escala);
+    }
+
+    const marcacoesY = config.eixoY.marcacoes.map(v => `<span>${v}</span>`).join('');
+    const linhasGrade = config.eixoY.marcacoes.map(() => `<div class="linha"></div>`).join('');
+
+    const posicoesX = config.eixoX.map((rotulo, i) => {
+        const pct = (i / (config.eixoX.length - 1)) * 100;
+        return `<div class="pos-x" style="left: ${pct}%">${rotulo}</div>`;
+    }).join('');
+
+    const barrasHTML = config.dados.map((valor, i) => {
+        const pct = (valor / config.eixoY.maximo) * 100;
+        const classeZero = valor === 0 ? "barra-zero" : "";
+        const zIndex = i + 1;
+
+        return `
+            <div class="barra-wrapper" style="z-index: ${zIndex}">
+                <div class="barra-3d ${classeZero}" style="height: ${pct}%;">
+                    <div class="face-frente"></div>
+                    <div class="face-topo"></div>
+                    <div class="face-lado"></div>
+                    <div class="valor-rotulo">${valor}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = `
+        <div class="area-titulo">${config.titulo}</div>
+        <div class="area-titulo-y"><span>${config.tituloEixoY}</span></div>
+        <div class="area-valores-y">${marcacoesY}</div>
+        
+        <div class="area-plotagem">
+            <div class="linhas-grade">${linhasGrade}</div>
+            <div class="grid-barras" style="grid-template-columns: repeat(${config.dados.length}, minmax(0, 1fr))">
+                ${barrasHTML}
+            </div>
+        </div>
+        
+        <div class="area-valores-x">${posicoesX}</div>
+        <div class="area-titulo-x">${config.tituloEixoX}</div>
+        <div class="area-rodape">${config.fonte}</div>
+    `;
+}
+
+/* ============================================================
+   TESTE COM TÍTULOS LONGOS E QUEBRA DE LINHAS
+   ============================================================ */
+const ESCALA_TESTE = 0.5; 
+
+// 1. Gráfico Original (Título Normal)
+criarHistograma3D("grafico-1", {
+    escala: ESCALA_TESTE, paleta: "azul",
+    titulo: "Idades de 13 alunos do 4º DSM, Fatec-SJC, 07/08/2026",
+    tituloEixoX: "Idades", tituloEixoY: "Número de Alunos", fonte: "Fonte: Profa. Nanci de Oliveira.",
+    dados: [9, 2, 0, 1, 1],
+    eixoX: [19, 22, 25, 28, 31, 34],
+    eixoY: { maximo: 10, marcacoes: [10, 5, 0] }
+});
+</script>
+
+</body>
+</html>
